@@ -181,6 +181,9 @@ var modelVerto = {
     },
     
     list: function (collectionName, params = {}, cb) {
+        if (!this.db)
+            return;
+
         var transaction = this.db.transaction(collectionName, IDBTransaction.READ_ONLY);
         var objectStore = transaction.objectStore(collectionName);
         if (params.index) {

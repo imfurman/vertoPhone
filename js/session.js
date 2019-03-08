@@ -73,9 +73,9 @@ class Session {
         }, this.vetoCallbacks);
         this.verto.login();
 
-        if (Helper.phoneWindow) {
-            Helper.phoneWindow.setAlwaysOnTop(this.alwaysOnTop);
-        }
+        // if (Helper.phoneWindow) {
+        //     Helper.phoneWindow.setAlwaysOnTop(this.alwaysOnTop);
+        // }
     }
 
     startConference (v, dialog, pvtData) {

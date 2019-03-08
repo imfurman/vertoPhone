@@ -1,17 +1,14 @@
 
 var bg = angular.module('app.chrome', []);
 bg.run(function ($rootScope) {
-    chrome.runtime.onMessage.addListener(
-        function(request, sender, sendResponse) {
-            $rootScope.$emit('bg:' + request.action, request.data)
+    window.addEventListener("message", (message) => {
+        if (message.detail !== undefined) {
+            $rootScope.$emit('bg:' + message.detail.action, message.detail.data);
         }
-    );
-    
+    });
+
     $rootScope.sendBg = function (action, data) {
-        chrome.runtime.sendMessage({
-            action: action,
-            data: data
-        });
+        Helper.sendSession(action, data);
     }
 });
 
@@ -52,6 +49,16 @@ vertoPhone.run(function($rootScope, $window, CallService, $timeout) {
     $rootScope.activeCall = {};
 
     $rootScope.errors = [];
+
+    $rootScope.init = function () {
+        modelVerto.init();
+
+        Helper.refreshVertoDevice();
+        Helper.init();
+
+        Helper.createVertoWindow();
+    };
+
     $rootScope.addError = function (msg, time) {
         var err = new Error(msg);
         $rootScope.errors.push(err);
@@ -89,7 +96,7 @@ vertoPhone.run(function($rootScope, $window, CallService, $timeout) {
             }
             if (data.success) {
                 document.title = data.login;
-                $rootScope.useVideo = $window.vertoSession.useVideo;
+                //$rootScope.useVideo = $window.vertoSession.useVideo;
                 $rootScope.isLoged = true;
                 $rootScope.changeState('dialpad', false);
                 $timeout(function () {
@@ -111,11 +118,16 @@ vertoPhone.run(function($rootScope, $window, CallService, $timeout) {
         }
 
     });
+
     $rootScope.$on('bg:changeCall', function (e, data) {
         console.log(data);
         setActiveCall(data);
     });
-    
+
+    $rootScope.$on('bg:saveSettings', function (e, data) {
+        Helper.saveSettings(data);
+    });
+
     $rootScope.setViewCall = function (call) {
         $rootScope.activeCall = call;
         if (call.state == 'held') {
@@ -127,7 +139,6 @@ vertoPhone.run(function($rootScope, $window, CallService, $timeout) {
         //     $rootScope.activeCall = call;
         }
         setCallView();
-
     };
 
     function setCallView() {
@@ -141,7 +152,7 @@ vertoPhone.run(function($rootScope, $window, CallService, $timeout) {
         for (var key in data) {
             var call = data[key];
             $rootScope.activeCalls.push(call);
-            if (call.state == 'active') {
+            if (call.state === 'active') {
                 $rootScope.activeCall = call;
             }
         }

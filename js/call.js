@@ -95,8 +95,8 @@ class Call {
     }
 
     _clearNotification () {
-        if (this.notificationId)
-            Helper.clearNotificationId(this.notificationId);
+        if (this.notification)
+            Helper.clearNotification(this.notification);
     }
 
     destroy (userDropCall, d) {
@@ -150,59 +150,59 @@ class Call {
     showNewCall () {
         const session = Helper.session;
         if  (session && session.notificationNewCall) {
-            Helper.createNotification({
-                type: 'basic',
-                iconUrl: 'images/call64.png',
-                title: "New call",
-                message: this.calleeIdNumber,
-                contextMessage: this.calleeIdName,
-                requireInteraction: true,
-                buttons: [
-                    {
-                        title: "Answer",
-                        iconUrl: "images/call64.png"
-                    },
-                    {
-                        title: "Hangup",
-                        iconUrl: "images/error64.png"
-                    }
-                ]
-            }, (id) => {
-                console.log(id);
-                this.notificationId = id;
-            });
-        } else {
-            if (!Helper.getWindowById('vertoPhone'))
-                Helper.createVertoWindow();
+            Helper.createNotificationMsg('New call', '...', '', 'images/call128.png', 2000);
+
+            // Helper.createNotification({
+            //     iconUrl: 'images/call64.png',
+            //     title: "New call",
+            //     message: this.calleeIdNumber,
+            //     contextMessage: this.calleeIdName,
+            //     requireInteraction: true,
+            //     actions: [
+            //         {
+            //             action: 'answer-action',
+            //             title: "Answer",
+            //             icon: "images/call64.png"
+            //         },
+            //         {
+            //             action: 'hangup-action',
+            //             title: "Hangup",
+            //             icon: "images/error64.png"
+            //         }
+            //     ]
+            // }, (notification) => {
+            //     this.notification = notification;
+            // });
         }
     }
 
     showMissed () {
-        if  (Helper.session && Helper.session.notificationMissed) {
-            const number = this.calleeIdNumber;
-            Helper.createNotification({
-                type: 'basic',
-                iconUrl: 'images/exclamation64.png',
-                title: "Missed call!",
-                message: number,
-                contextMessage: this.calleeIdName + '(' + new Date().toLocaleString() + ')',
-                requireInteraction: true,
-                buttons: [
-                    {
-                        title: "Reply",
-                        iconUrl: "images/call64.png"
-                    },
-                    {
-                        title: "OK",
-                        iconUrl: "images/success64.png"
-                    }
-                ]
-            }, (id) => {
-                console.log(id);
-                Helper.missedNotifications[id] = {
-                    number: number
-                }
-            });
-        }
+        // if  (Helper.session && Helper.session.notificationMissed) {
+        //     const number = this.calleeIdNumber;
+        //     Helper.createNotification({
+        //         iconUrl: 'images/exclamation64.png',
+        //         title: "Missed call!",
+        //         message: number,
+        //         contextMessage: this.calleeIdName + '(' + new Date().toLocaleString() + ')',
+        //         requireInteraction: true,
+        //         actions: [
+        //             {
+        //                 action: 'reply-action',
+        //                 title: "Reply",
+        //                 icon: "images/call64.png"
+        //             },
+        //             {
+        //                 action: 'reply-action',
+        //                 title: "OK",
+        //                 icon: "images/success64.png"
+        //             }
+        //         ]
+        //     }, (notification) => { // work in progress
+        //         console.log(id);
+        //         Helper.missedNotifications[id] = {
+        //             number: number
+        //         }
+        //     });
+        // }
     }
 }

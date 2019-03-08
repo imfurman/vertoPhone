@@ -63,7 +63,7 @@ angular
 
         function dtmf(digit) {
             $scope.number += digit;
-            ringer.src = '../sound/DTMF' + encodeURIComponent(isFinite(digit) ? digit : 'Asterisk') + '.mp3';
+            ringer.src = './sound/DTMF' + encodeURIComponent(isFinite(digit) ? digit : 'Asterisk') + '.mp3';
             ringer.play();
         }
 

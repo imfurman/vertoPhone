@@ -12,6 +12,7 @@ let Helper = {
     missedNotifications: {},
     videoParamsBest: {},
     extensionPort: null,
+    settings: {},
 
     init: () => {
         const video = document.createElement('video');
@@ -28,8 +29,10 @@ let Helper = {
     },
 
     refreshVertoDevice: () => {
-        $.verto.init({skipPermCheck: true}, ()=> {
+        $.verto.init({skipPermCheck: false}, ()=> {
             Helper.videoParamsBest = {};
+            Helper.setVertoDevices();
+
             let count = $.verto.videoDevices.length;
 
             $.verto.videoDevices.forEach( (i) => {
@@ -66,123 +69,118 @@ let Helper = {
     },
 
     sendSession: (action, obj) => {
-        chrome.runtime.sendMessage({
-            action: action,
-            data: obj
-        });
+        var data = {action: action, data: obj};
+        var event = new CustomEvent('message', { 'detail': data });
+
+        window.dispatchEvent(event);
     },
 
     getWindowById: (id) => {
-        return chrome.app.window.get(id);
+        return window;
+        //return chrome.app.window.get(id);
     },
 
-    clearNotificationId: (id) => {
-        chrome.notifications.clear(id);
+    clearNotification: (notification) => {
+        notification.close();
     },
 
-    createNotificationMsg: (title, messsage, contextMessage, imgUri, time) => {
+    createNotificationMsg: (title, message, contextMessage, imgUri, time) => {
         Helper.createNotification({
-            type: 'basic',
             iconUrl: imgUri || 'images/phone16.png',
             title: title,
-            message: messsage,
+            message: message,
             contextMessage: contextMessage
-        }, (id) => {
-            console.log(id);
-            if (time)
+        }, (notification) => {
+            if (time) {
                 setTimeout(() => {
-                    chrome.notifications.clear(id)
+                    notification.close();
                 }, time)
+            }
         });
     },
 
     createNotification: (params, cb) => {
-        chrome.notifications.create(params, cb);
+        if(window.Notification) {
+            Notification.requestPermission().then((status) => {
+                var message = params.message;
+
+                if (params.contextMessage) {
+                    message = message + '(' + params.contextMessage + ')';
+                }
+
+                var notification = new Notification(params.title, {
+                    body: message,
+                    icon: params.iconUrl,
+                    requireInteraction: params.requireInteraction || false
+                });
+
+                cb(notification);
+            });
+        }
+        //chrome.notifications.create(params, cb);
+    },
+
+    setVertoDevices: () => {
+        window.vertoDevices = {
+            audioInDevices: $.verto.audioInDevices,
+            audioOutDevices: $.verto.audioOutDevices,
+            videoDevices: $.verto.videoDevices
+        };
     },
 
     createVertoWindow: () => {
-        chrome.app.window.create('index.html',
-            {
-                id: "vertoPhone",
-                innerBounds: {
-                    width: 235,
-                    height: 430,
-                    minWidth: 235,
-                    maxWidth: 235,
-                    minHeight: 430
-                }
-            },
-            (window) => {
-                const phoneWindow = Helper.phoneWindow = window;
-                phoneWindow.contentWindow.vertoDevices = {
-                    audioInDevices: $.verto.audioInDevices,
-                    audioOutDevices: $.verto.audioOutDevices,
-                    videoDevices: $.verto.videoDevices
-                };
+        window.onload = function() {
+            Helper.setVertoDevices();
+            window.vertoSession = Helper.session;
 
-                phoneWindow.contentWindow.onload = () => {
-                    phoneWindow.vertoSession = Helper.session;
-                    Helper.getSettings(function (data) {
-                        phoneWindow.contentWindow.vertoSession = Helper.session;
+            Helper.getSettings(function (data) {
+                Helper.sendSession('init', {
+                    settings: data || {},
+                    activeCalls: Helper.session && Helper.session.activeCalls,
+                    logged: Helper.session && Helper.session.isLogin
+                });
+            });
 
-                        if (Helper.session) {
-                            phoneWindow.setAlwaysOnTop(!!Helper.session.alwaysOnTop);
-                        }
-
-                        Helper.sendSession('init', {
-                            settings: data || {},
-                            activeCalls: Helper.session && Helper.session.activeCalls,
-                            logged: Helper.session && Helper.session.isLogin
-                        });
-                    });
-                };
-            }
-        );
+        };
     },
 
     getSettings: (cb) => {
-        if (Helper.session && Helper.session._settings)
-            return cb(Helper.session._settings);
+        // if (Helper.session && Helper.session._settings)
+        //     return cb(Helper.session._settings);
+        //
+        // let settings = {
+        //     iceServers: true,
+        //     ring: true,
+        //     alwaysOnTop: true
+        // };
 
-        let settings = {
-            iceServers: true,
-            ring: true,
-            alwaysOnTop: true
-        };
+        cb(Helper.settings);
 
-        function copyTo(to, from) {
-            for (var key in from) {
-                if (from.hasOwnProperty(key)) {
-                    to[key] = from[key]
-                }
-            }
-        }
-
-        chrome.storage.sync.get('settings', function (sync) {
-            copyTo(settings, sync && sync.settings);
-            chrome.storage.local.get('settings', function (local) {
-                copyTo(settings, local && local.settings);
-                cb(settings);
-            });
-        });
+        // function copyTo(to, from) {
+        //     for (var key in from) {
+        //         if (from.hasOwnProperty(key)) {
+        //             to[key] = from[key]
+        //         }
+        //     }
+        // }
+        //
+        // chrome.storage.sync.get('settings', function (sync) {
+        //     copyTo(settings, sync && sync.settings);
+        //     chrome.storage.local.get('settings', function (local) {
+        //         copyTo(settings, local && local.settings);
+        //         cb(settings);
+        //     });
+        // });
     },
 
     setSettings: (data, cb) => {
-        var sync = {};
-        var local = {};
 
-        for (var key in data) {
-            if (!data.hasOwnProperty(key)) continue;
+        Helper.settings = Object.assign({}, Helper.settings, data);
 
-            if (~SETTINGS_LOCAL_STORAGE.indexOf(key)) {
-                local[key] = data[key]
-            } else {
-                sync[key] = data[key]
-            }
-        }
+        console.log('Save settings in Helper');
+        console.log(Helper.settings);
 
-        chrome.storage.sync.set({settings: sync});
-        chrome.storage.local.set({settings: local}, cb);
+        cb();
     },
 
     saveSettings: (data) => {
@@ -195,10 +193,8 @@ let Helper = {
                 Helper.session.logout();
             }
 
-            Helper.session = new Session(data);
-
-            if (Helper.phoneWindow)
-                Helper.phoneWindow.contentWindow.vertoSession = Helper.session;
+            Helper.session = new Session(Helper.settings);
+            window.vertoSession = Helper.session;
 
             Helper.createNotificationMsg('Save', 'Saved settings', '', 'images/success64.png', 2000);
         });
